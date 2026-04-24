@@ -1,0 +1,23 @@
+{
+  "csharp": {
+    "build-mode": "none",
+    "projects": {
+      "Compilers": {
+        "paths": [
+          "src/Compilers"
+        ]
+      },
+      "Workspaces": {
+        "paths": [
+          "src/Workspaces"
+        ]
+      },
+      "Features": {
+        "paths": [
+          "src/Features",
+          "src/EditorFeatures"
+        ]
+      }
+    }
+  }
+}

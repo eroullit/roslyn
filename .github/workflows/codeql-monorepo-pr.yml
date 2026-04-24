@@ -1,0 +1,68 @@
+# CodeQL monorepo scanning for Roslyn
+#
+# Scans the three most important subprojects on PRs:
+#   - Compilers  (src/Compilers)
+#   - Workspaces (src/Workspaces)
+#   - Features   (src/Features, src/EditorFeatures)
+#
+# Only projects touched by a PR are scanned; unscanned projects have their
+# last-known SARIF results republished so required checks still pass.
+
+name: "CodeQL monorepo - PR"
+
+on:
+  pull_request:
+    branches: ["main"]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+jobs:
+  changes:
+    name: Detect changed projects
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      projects: ${{ steps.changes.outputs.projects }}
+      scan-required: ${{ steps.changes.outputs.scan-required }}
+    steps:
+      - name: Spot changes to projects
+        id: changes
+        uses: advanced-security/monorepo-code-scanning-action/changes@main
+        with:
+          projects-json: projects.json
+
+  scan:
+    name: Analyze ${{ matrix.project.name }}
+    if: needs.changes.outputs.scan-required == 'true'
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.changes.outputs.projects).projects }}
+    steps:
+      - name: Analyze code
+        uses: advanced-security/monorepo-code-scanning-action/scan@main
+
+  republish:
+    name: Republish unchanged project results
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Republish results
+        uses: advanced-security/monorepo-code-scanning-action/republish-sarif@main
+        with:
+          projects: ${{ needs.changes.outputs.projects }}
