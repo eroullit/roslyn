@@ -1,0 +1,38 @@
+# CodeQL monorepo scheduled full scan for Roslyn
+#
+# Runs a full scan of all three subprojects on a weekly schedule and on
+# manual dispatch (e.g. after a direct push to main that bypasses the PR scan).
+
+name: "CodeQL monorepo - Scheduled"
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"  # Every Monday at 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Analyze ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ["Compilers", "Workspaces", "Features"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp/project:${{ matrix.project }}"
